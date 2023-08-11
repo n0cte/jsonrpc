@@ -1,4 +1,4 @@
-package server
+package jsonrpc
 
 import (
 	"bytes"
@@ -6,6 +6,7 @@ import (
 )
 
 var (
+	_ json.Marshaler   = (*Request)(nil)
 	_ json.Unmarshaler = (*Request)(nil)
 )
 
@@ -23,19 +24,22 @@ type (
 	}
 )
 
+func (req Request) MarshalJSON() ([]byte, error) {
+	if req.single {
+		return json.Marshal(req.params[0])
+	}
+	return json.Marshal(req.params)
+}
+
 func (req *Request) UnmarshalJSON(data []byte) error {
 	data = bytes.TrimSpace(data)
 	req.single = !bytes.HasPrefix(data, []byte("["))
-	req.params = make([]RequestParams, 0)
 
-	if req.single {
-		var prm RequestParams
-		if err := json.Unmarshal(data, &prm); err != nil {
-			return nil
-		}
-		req.params = append(req.params, prm)
-		return nil
+	if !req.single {
+		req.params = make([]RequestParams, 0)
+		return json.Unmarshal(data, &req.params)
 	}
 
-	return json.Unmarshal(data, &req.params)
+	req.params = make([]RequestParams, 1)
+	return json.Unmarshal(data, &req.params[0])
 }

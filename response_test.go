@@ -1,4 +1,4 @@
-package server
+package jsonrpc
 
 import (
 	"encoding/json"
@@ -19,7 +19,6 @@ func TestSingleResponse(t *testing.T) {
 	}
 	data, err := json.Marshal(r)
 	require.NoError(t, err)
-	t.Logf("%s", data)
 	assert.Equal(t, `{"jsonrpc":"2.0","id":1,"result":"1"}`, string(data))
 }
 
@@ -37,7 +36,6 @@ func TestSingleErrResponse(t *testing.T) {
 	}
 	data, err := json.Marshal(r)
 	require.NoError(t, err)
-	t.Logf("%s", data)
 	assert.Equal(t, `{"jsonrpc":"2.0","id":1,"error":{"code":0,"message":"1"}}`, string(data))
 }
 
@@ -52,6 +50,5 @@ func TestMultipleResponse(t *testing.T) {
 	}
 	data, err := json.Marshal(r)
 	require.NoError(t, err)
-	t.Logf("%s", data)
 	assert.Equal(t, `[{"jsonrpc":"2.0","id":1,"result":"1"}]`, string(data))
 }

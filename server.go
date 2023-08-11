@@ -1,36 +1,56 @@
-package server
+package jsonrpc
 
 import (
 	"encoding/json"
 	"net/http"
+	"sync"
 )
 
 var (
-	_ http.Handler = (*Server)(nil)
 	_ Handler      = (HandlerFunc)(nil)
+	_ http.Handler = (*rpcServer)(nil)
+	_ Server       = (*rpcServer)(nil)
 )
 
 type (
+	Server interface {
+		http.Handler
+
+		Handle(string, Handler)
+		HandleFunc(string, HandlerFunc)
+	}
+
 	HandlerFunc func(json.RawMessage) (json.RawMessage, error)
 
 	Handler interface {
 		Dispatch(json.RawMessage) (json.RawMessage, error)
 	}
 
-	Server struct {
+	rpcServer struct {
+		mu       *sync.Mutex
 		handlers map[string]Handler
 	}
 )
-
-func New(handlers map[string]Handler) *Server {
-	return &Server{handlers: handlers}
-}
 
 func (f HandlerFunc) Dispatch(data json.RawMessage) (json.RawMessage, error) {
 	return f(data)
 }
 
-func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func NewServer(handlers map[string]Handler) Server {
+	return &rpcServer{mu: new(sync.Mutex), handlers: handlers}
+}
+
+func (s *rpcServer) Handle(name string, handler Handler) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.handlers[name] = handler
+}
+
+func (s rpcServer) HandleFunc(name string, handler HandlerFunc) {
+	s.Handle(name, handler)
+}
+
+func (s rpcServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var (
 		req Request
 		res Response
